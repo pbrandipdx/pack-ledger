@@ -12,5 +12,6 @@ window.PACK_ITEMS = [
   {id:"stove", cat:"food", role:"Stove", fit:"contain", img:"images/stove.jpg", name:"Titanium Backpacking Stove", brand:"TOAKS", oz:1.7, note:"Stove only, 48 g. Uses isobutane-propane canisters (fuel not counted). Includes a storage bag.", on:true},
   {id:"pot", cat:"food", role:"Cook pot", fit:"contain", img:"images/pot.jpg", name:"Titanium 750 ml Pot", brand:"TOAKS", oz:3.6, note:"Listed at 3.6 oz. Sold as pot, lid, and mesh sack. Weigh it to confirm what that includes.", on:true},
   {id:"cup", cat:"food", role:"Cup", fit:"contain", img:"images/cup.jpg", name:"Light Titanium 450 ml Cup, Ultralight", brand:"TOAKS", oz:1.7, note:"48 g, no lid.", on:true},
-  {id:"sleeves", cat:"clothing", role:"Compression", name:"Compression Leg Sleeves, L/XL", brand:"Zensah", oz:null, note:"Weight not published. Weigh the pair and enter it.", on:true}
+  {id:"sleeves", cat:"clothing", role:"Compression", name:"Compression Leg Sleeves, L/XL", brand:"Zensah", oz:null, note:"Weight not published. Weigh the pair and enter it.", on:true},
+  {id:"filter", cat:"misc", role:"Water filter", name:"BeFree Water Filtration System, 1 L", brand:"Katadyn", oz:2, img:"images/filter.jpg", fit:"contain", note:"Sportsman's Guide lists 2 oz for the 1 L size (3 L is 4 oz). Hollow-fiber filter, about 1,000 L life. Removes bacteria and protozoa, not viruses.", on:true}
 ];
