@@ -445,6 +445,8 @@ document.addEventListener("focusout", function(e){
   var t = e.target;
   if(t && t.id && t.id.indexOf("edit-")===0){
     var rt = e.relatedTarget;
+    // moving focus to this item's own unit dropdown is part of the same edit, not a commit
+    if(rt && rt.id==="editu-"+t.id.slice(5)) return;
     commitEdit(t.id.slice(5), false, !!(rt && rt.closest && rt.closest("button,input,select,label")));
   } else if(t && t.id && t.id.indexOf("ef-")===0){
     var raw = t.id.slice(3), idx = raw.lastIndexOf("-"), fid = raw.slice(0,idx), field = raw.slice(idx+1);
