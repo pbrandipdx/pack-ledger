@@ -20,5 +20,6 @@ window.PACK_ITEMS = [
   {id:"peakthai", cat:"food", role:"Backpacking meal", fit:"contain", img:"images/thai.jpg", name:"Thai Chicken Coconut Curry, 2 Servings", brand:"Peak Refuel", oz:5.4, note:"REI lists 5.4 oz net weight, 430 cal per serving.", on:true},
   {id:"peakchickenrice", cat:"food", role:"Backpacking meal", fit:"contain", img:"images/chickenrice.jpg", name:"Homestyle Chicken & Rice, 2 Servings", brand:"Peak Refuel", oz:5.15, note:"REI lists 5.15 oz net weight, 370 cal per serving.", on:true},
   {id:"peakbison", cat:"food", role:"Backpacking meal", fit:"contain", img:"images/bison.jpg", name:"Backcountry Bison Bowl, 2 Servings", brand:"Peak Refuel", oz:7.05, note:"REI lists 7.05 oz net weight, 460 cal per serving.", on:true},
-  {id:"peakgoulash", cat:"food", role:"Backpacking meal", fit:"contain", img:"images/goulash.jpg", name:"American Buffalo Goulash, 2 Servings", brand:"Peak Refuel", oz:4.94, note:"Manufacturer lists 4.94 oz net weight, 740 cal total.", on:true}
+  {id:"peakgoulash", cat:"food", role:"Backpacking meal", fit:"contain", img:"images/goulash.jpg", name:"American Buffalo Goulash, 2 Servings", brand:"Peak Refuel", oz:4.94, note:"Manufacturer lists 4.94 oz net weight, 740 cal total.", on:true},
+  {id:"groundsheet", cat:"base", role:"Ground sheet", fit:"contain", img:"images/groundsheet.jpg", name:"Tent Ground Sheet", brand:"REI Co-op", oz:null, note:"Manufacture tag reads China, May 2018. Exact model discontinued, so no published weight. Weigh it and enter the reading.", on:true}
 ];
