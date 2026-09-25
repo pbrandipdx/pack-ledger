@@ -139,7 +139,10 @@ button{cursor:pointer}
 .tag.mine{color:var(--ink)}
 .editbox{display:flex;gap:6px;align-items:center;width:100%}
 .editbox input{width:100%;min-width:0;padding:6px 8px;border:1px solid var(--ink);border-radius:3px;background:var(--bg);font-variant-numeric:tabular-nums}
-.editbox span{font-size:13px;color:var(--muted)}
+.editbox select{flex:none;width:64px;padding:6px 6px;border:1px solid var(--line);border-radius:3px;background:var(--bg);color:var(--ink);font-size:13px}
+.editable{cursor:text;border-bottom:1px dashed transparent}
+.editable:hover,.editable:focus-visible{border-bottom-color:var(--muted)}
+.editline{display:block;width:100%;padding:6px 8px;margin:2px 0;border:1px solid var(--ink);border-radius:3px;background:var(--bg);color:inherit;font:inherit}
 .rm{position:absolute;top:8px;right:8px;width:28px;height:28px;border-radius:3px;border:1px solid var(--line);background:var(--bg);color:var(--muted);font-size:16px;line-height:1;display:grid;place-items:center;padding:0}
 .rm:hover{color:var(--ink);border-color:var(--ink)}
 .empty{grid-column:1/-1;border:1px dashed var(--line);border-radius:3px;padding:28px 20px;color:var(--muted);text-align:center;background:var(--surface)}
@@ -220,12 +223,12 @@ var CATS = [
 ];
 var ITEMS = window.PACK_ITEMS || [];
 var KEY = "packledger.v1";
-function defaults(){ return {u:"oz", chk:{}, w:{}, custom:[]}; }
+function defaults(){ return {u:"oz", chk:{}, w:{}, custom:[], edits:{}}; }
 function load(){
   var s = defaults();
   try{
     var raw = localStorage.getItem(KEY);
-    if(raw){ var p = JSON.parse(raw); if(p && typeof p==="object"){ s.u = p.u||"oz"; s.chk = p.chk||{}; s.w = p.w||{}; s.custom = Array.isArray(p.custom)?p.custom:[]; } }
+    if(raw){ var p = JSON.parse(raw); if(p && typeof p==="object"){ s.u = p.u||"oz"; s.chk = p.chk||{}; s.w = p.w||{}; s.custom = Array.isArray(p.custom)?p.custom:[]; s.edits = (p.edits && typeof p.edits==="object")?p.edits:{}; } }
   }catch(e){}
   return s;
 }
@@ -237,6 +240,7 @@ function all(){ return ITEMS.concat(S.custom); }
 function isOn(it){ return (it.id in S.chk) ? !!S.chk[it.id] : !!it.on; }
 function wt(it){ if(it.id in S.w && S.w[it.id]!=null) return S.w[it.id]; return it.oz; }
 function mine(it){ return (it.id in S.w && S.w[it.id]!=null) || it.custom; }
+function textFor(it,field){ var o = S.edits && S.edits[it.id]; return (o && o[field]!=null && o[field]!=="") ? o[field] : (it[field]||""); }
 function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
 function trim(n){ return String(Math.round(n*10)/10); }
 function fmt(oz,u){
@@ -285,22 +289,36 @@ function card(it){
   var media = it.img ? '<img src="'+it.img+'" alt="'+esc(it.name)+'">' : '<div class="ph" aria-hidden="true">'+esc(it.role||it.name||"?")+'</div>';
   var wpart;
   if(ui.editing===it.id){
-    var v = w==null ? "" : fromOz(w,u);
-    wpart = '<div class="editbox"><input id="edit-'+it.id+'" type="number" inputmode="decimal" step="any" min="0" value="'+v+'" aria-label="Weight in '+(u==="lb"?"pounds":u==="g"?"grams":"ounces")+'"><span>'+(u==="lb"?"lb":u)+'</span></div>';
+    var eu = ui.editUnit || u;
+    var v = ui.editPending!=null ? ui.editPending : (w==null ? "" : fromOz(w,eu));
+    ui.editPending = null;
+    var opts = ["oz","g","lb"].map(function(k){ return '<option value="'+k+'"'+(eu===k?" selected":"")+'>'+k+'</option>'; }).join("");
+    wpart = '<div class="editbox"><input id="edit-'+it.id+'" type="number" inputmode="decimal" step="any" min="0" value="'+v+'" aria-label="Weight in '+(eu==="lb"?"pounds":eu==="g"?"grams":"ounces")+'"><select class="editu" id="editu-'+it.id+'" data-id="'+it.id+'" aria-label="Unit">'+opts+'</select></div>';
   } else if(w==null){
     wpart = '<button type="button" class="wbtn none" data-act="edit" data-id="'+it.id+'">Add weight</button>';
   } else {
     wpart = '<button type="button" class="wbtn" data-act="edit" data-id="'+it.id+'" aria-label="Weight '+fmt(w,u)+'. Edit">'+fmt(w,u)+'<small>'+alt(w,u)+'</small></button>';
   }
   var tag = ui.editing===it.id ? "" : (w==null ? "" : '<span class="tag'+(mine(it)?' mine':'')+'">'+(mine(it)?'Your weight':'Manufacturer spec')+'</span>');
+  var efName = ui.editField && ui.editField.id===it.id && ui.editField.field==="name";
+  var efBrand = ui.editField && ui.editField.id===it.id && ui.editField.field==="brand";
+  var efNote = ui.editField && ui.editField.id===it.id && ui.editField.field==="note";
+  var nameVal = textFor(it,"name"), brandVal = textFor(it,"brand"), noteVal = textFor(it,"note");
+  var nameHtml = efName
+    ? '<input class="editline" id="ef-'+it.id+'-name" type="text" value="'+esc(nameVal)+'" aria-label="Item name">'
+    : '<h3 class="editable" tabindex="0" role="button" data-act="edit-field" data-id="'+it.id+'" data-field="name">'+esc(nameVal)+'</h3>';
+  var brandHtml = !brandVal ? "" : (efBrand
+    ? '<input class="editline" id="ef-'+it.id+'-brand" type="text" value="'+esc(brandVal)+'" aria-label="Brand">'
+    : '<p class="sub editable" tabindex="0" role="button" data-act="edit-field" data-id="'+it.id+'" data-field="brand">'+esc(brandVal)+'</p>');
+  var noteHtml = !noteVal ? "" : (efNote
+    ? '<input class="editline" id="ef-'+it.id+'-note" type="text" value="'+esc(noteVal)+'" aria-label="Note">'
+    : '<p class="note editable" tabindex="0" role="button" data-act="edit-field" data-id="'+it.id+'" data-field="note">'+esc(noteVal)+'</p>');
   return '<article class="card '+(on?'on':'off')+'">'+
-    '<label class="media'+(it.fit==="contain"?' contain':'')+'" for="chk-'+it.id+'"><input class="pick" type="checkbox" id="chk-'+it.id+'" data-id="'+it.id+'"'+(on?' checked':'')+'><span class="sr">Include '+esc(it.name)+'</span>'+media+'</label>'+
-    (it.custom?'<button type="button" class="rm" data-act="remove" data-id="'+it.id+'" aria-label="Remove '+esc(it.name)+'">×</button>':'')+
+    '<label class="media'+(it.fit==="contain"?' contain':'')+'" for="chk-'+it.id+'"><input class="pick" type="checkbox" id="chk-'+it.id+'" data-id="'+it.id+'"'+(on?' checked':'')+'><span class="sr">Include '+esc(nameVal)+'</span>'+media+'</label>'+
+    (it.custom?'<button type="button" class="rm" data-act="remove" data-id="'+it.id+'" aria-label="Remove '+esc(nameVal)+'">×</button>':'')+
     '<div class="body">'+
       '<p class="role">'+esc(it.role||"Item")+'</p>'+
-      '<h3>'+esc(it.name)+'</h3>'+
-      (it.brand?'<p class="sub">'+esc(it.brand)+'</p>':'')+
-      (it.note?'<p class="note">'+esc(it.note)+'</p>':'')+
+      nameHtml+brandHtml+noteHtml+
       '<div class="wrow">'+wpart+tag+'</div>'+
     '</div></article>';
 }
@@ -355,6 +373,7 @@ function render(){
   var rb = document.getElementById("reset"); rb.textContent = ui.confirmReset ? "Tap again to confirm" : "Reset list";
 
   if(ui.editing){ var e = document.getElementById("edit-"+ui.editing); if(e){ e.focus(); e.select(); } }
+  else if(ui.editField){ var ef = document.getElementById("ef-"+ui.editField.id+"-"+ui.editField.field); if(ef){ ef.focus(); ef.select(); } }
   else if(ui.adding && !focusId){ var a = document.getElementById("add-name"); if(a) a.focus(); }
   else if(focusId){ var f = document.getElementById(focusId); if(f) f.focus(); }
 }
@@ -362,12 +381,28 @@ function render(){
 function commitEdit(id, cancel, quiet){
   if(ui.editing!==id) return;
   var el = document.getElementById("edit-"+id);
-  ui.editing = null;
+  var eu = ui.editUnit || S.u;
+  ui.editing = null; ui.editUnit = null; ui.editPending = null;
   if(!cancel && el){
     var raw = el.value.trim();
     var it = all().filter(function(x){return x.id===id;})[0];
     if(raw===""){ delete S.w[id]; if(it && it.custom) it.oz = null; }
-    else { var n = parseFloat(raw); if(isFinite(n) && n>=0){ var oz = toOz(n,S.u); if(it && it.custom) it.oz = oz; S.w[id] = oz; } }
+    else { var n = parseFloat(raw); if(isFinite(n) && n>=0){ var oz = toOz(n,eu); if(it && it.custom) it.oz = oz; S.w[id] = oz; } }
+    save();
+  }
+  if(!quiet) render();
+}
+
+function commitTextEdit(id, field, cancel, quiet){
+  if(!ui.editField || ui.editField.id!==id || ui.editField.field!==field) return;
+  var el = document.getElementById("ef-"+id+"-"+field);
+  ui.editField = null;
+  if(!cancel && el){
+    var trimmed = el.value.trim();
+    if(!S.edits) S.edits = {};
+    if(!S.edits[id]) S.edits[id] = {};
+    if(trimmed==="") delete S.edits[id][field]; else S.edits[id][field] = trimmed;
+    if(Object.keys(S.edits[id]).length===0) delete S.edits[id];
     save();
   }
   if(!quiet) render();
@@ -376,6 +411,18 @@ function commitEdit(id, cancel, quiet){
 document.addEventListener("change", function(e){
   var t = e.target;
   if(t.classList && t.classList.contains("pick")) toggle(t.getAttribute("data-id"));
+  else if(t.classList && t.classList.contains("editu")){
+    var id = t.getAttribute("data-id");
+    var oldUnit = ui.editUnit || S.u, newUnit = t.value;
+    var input = document.getElementById("edit-"+id);
+    var raw = input ? input.value.trim() : "";
+    if(raw!==""){
+      var n = parseFloat(raw);
+      ui.editPending = isFinite(n) ? fromOz(toOz(n,oldUnit), newUnit) : null;
+    } else ui.editPending = null;
+    ui.editUnit = newUnit;
+    render();
+  }
 });
 document.addEventListener("click", function(e){
   var b = e.target.closest ? e.target.closest("[data-act]") : null;
@@ -386,7 +433,8 @@ document.addEventListener("click", function(e){
   var act = b.getAttribute("data-act"), id = b.getAttribute("data-id");
   if(act==="unit"){ S.u = id; save(); render(); }
   else if(act==="jump"){ var s = document.getElementById("sec-"+id); if(s) s.scrollIntoView({behavior:"smooth", block:"start"}); }
-  else if(act==="edit"){ ui.editing = id; render(); }
+  else if(act==="edit"){ ui.editing = id; ui.editUnit = S.u; ui.editPending = null; ui.editField = null; render(); }
+  else if(act==="edit-field"){ ui.editing = null; ui.editField = {id:id, field:b.getAttribute("data-field")}; render(); }
   else if(act==="add"){ ui.adding = (ui.adding===id ? null : id); render(); }
   else if(act==="cancel-add"){ ui.adding = null; render(); }
   else if(act==="remove"){
@@ -398,6 +446,10 @@ document.addEventListener("focusout", function(e){
   if(t && t.id && t.id.indexOf("edit-")===0){
     var rt = e.relatedTarget;
     commitEdit(t.id.slice(5), false, !!(rt && rt.closest && rt.closest("button,input,select,label")));
+  } else if(t && t.id && t.id.indexOf("ef-")===0){
+    var raw = t.id.slice(3), idx = raw.lastIndexOf("-"), fid = raw.slice(0,idx), field = raw.slice(idx+1);
+    var rt = e.relatedTarget;
+    commitTextEdit(fid, field, false, !!(rt && rt.closest && rt.closest("button,input,select,label")));
   }
 });
 document.addEventListener("keydown", function(e){
@@ -405,6 +457,12 @@ document.addEventListener("keydown", function(e){
   if(t && t.id && t.id.indexOf("edit-")===0){
     if(e.key==="Enter"){ e.preventDefault(); commitEdit(t.id.slice(5), false); }
     else if(e.key==="Escape"){ e.preventDefault(); commitEdit(t.id.slice(5), true); }
+  } else if(t && t.id && t.id.indexOf("ef-")===0){
+    var raw = t.id.slice(3), idx = raw.lastIndexOf("-"), fid = raw.slice(0,idx), field = raw.slice(idx+1);
+    if(e.key==="Enter"){ e.preventDefault(); commitTextEdit(fid, field, false); }
+    else if(e.key==="Escape"){ e.preventDefault(); commitTextEdit(fid, field, true); }
+  } else if(t && t.getAttribute && t.getAttribute("data-act")==="edit-field" && (e.key==="Enter" || e.key===" ")){
+    e.preventDefault(); ui.editing = null; ui.editField = {id:t.getAttribute("data-id"), field:t.getAttribute("data-field")}; render();
   }
 });
 document.addEventListener("submit", function(e){

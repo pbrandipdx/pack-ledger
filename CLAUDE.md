@@ -48,3 +48,5 @@ The look is a clean white, image-forward product grid with dark navy text, conde
 ## Things to leave alone
 
 Saved state lives in each browser's localStorage under the key `packledger.v1`. Do not change that key or the shape of the saved object without a migration.
+
+The saved object has `u` (unit), `chk` (checked state), `w` (weight overrides), `custom` (added items), and `edits` (per-item text overrides for name/brand/note). On any card, clicking the weight, name, brand, or note text edits it in place, in that browser only. The weight editor also has its own unit dropdown, independent of the header's global unit toggle.
