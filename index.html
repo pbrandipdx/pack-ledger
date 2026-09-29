@@ -169,8 +169,17 @@ footer p{margin:0;max-width:62ch}
   .sec-head h2{font-size:30px}
 }
 @media (max-width:420px){
-  .grid{grid-template-columns:minmax(0,1fr)}
-  .media{aspect-ratio:4/3}
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .media{aspect-ratio:1/1}
+  .pick{top:6px;left:6px;width:22px;height:22px}
+  .body{padding:10px 10px 12px}
+  .card h3{font-size:16px}
+  .role{font-size:11px}
+  .sub{font-size:12px}
+  .note{font-size:12px;margin-top:6px}
+  .wbtn{font-size:20px}
+  .wbtn small{font-size:11px;margin-left:4px}
+  .rm{top:6px;right:6px;width:24px;height:24px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
