@@ -149,11 +149,35 @@ button{cursor:pointer}
 .hint{margin:0 0 14px;font-size:13px;color:var(--muted)}
 
 /* add form */
-.addform{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto auto;gap:10px;align-items:end;margin-bottom:20px;padding:16px;border:1px solid var(--line);border-radius:3px;background:var(--surface)}
+.addform{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.2fr) minmax(0,1fr) auto auto;gap:10px;align-items:end;margin-bottom:20px;padding:16px;border:1px solid var(--line);border-radius:3px;background:var(--surface)}
+.addform .srcnote{grid-column:1/-1;margin:0;font-size:13px;color:var(--warn)}
 .addform label{display:flex;flex-direction:column;gap:4px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
 .addform input,.addform select{padding:8px 10px;border:1px solid var(--line);border-radius:3px;background:var(--bg);color:var(--ink);font-size:15px;letter-spacing:0;text-transform:none}
 .wfield{display:grid;grid-template-columns:minmax(0,1fr) 74px;gap:6px}
 .addform .row{display:flex;gap:8px}
+
+/* web search */
+.search{flex:1 1 100%;order:10;position:relative}
+.search form{display:flex;gap:8px}
+.search input[type="search"]{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--line);border-radius:3px;background:var(--bg);color:var(--ink);font-size:15px}
+.search input[type="search"]:focus{border-color:var(--ink)}
+.results{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:30;background:var(--bg);border:1px solid var(--ink);border-radius:3px;box-shadow:0 10px 28px rgba(0,0,0,.16);max-height:min(70vh,560px);overflow:auto}
+.res-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--surface)}
+.res-head label{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:500}
+.res-head select{padding:6px 8px;border:1px solid var(--line);border-radius:3px;background:var(--bg);color:var(--ink);font-size:14px;letter-spacing:0;text-transform:none}
+.res-head .btn{padding:5px 12px;font-size:14px}
+.res-list{list-style:none;margin:0;padding:0}
+.res-item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;align-items:center;padding:12px;border-bottom:1px solid var(--line)}
+.res-item:last-child{border-bottom:0}
+.res-name{font-family:var(--font-head);font-weight:600;font-size:20px;line-height:1.15}
+.res-meta{margin-top:2px;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.res-meta a{color:inherit}
+.res-act{display:flex;flex-direction:column;align-items:flex-end;gap:6px;min-width:96px}
+.res-wt{font-family:var(--font-head);font-weight:700;font-size:22px;line-height:1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.res-wt.none{font-size:14px;color:var(--warn);font-weight:600}
+.res-flag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);font-weight:500}
+.res-act .btn{padding:6px 18px}
+.res-msg{margin:0;padding:16px 12px;color:var(--muted);font-size:14px}
 
 footer{margin-top:40px;border-top:1px solid var(--line);padding-block:24px 48px;color:var(--muted);font-size:13px;display:flex;gap:16px;flex-wrap:wrap;align-items:center;justify-content:space-between}
 footer p{margin:0;max-width:62ch}
@@ -162,7 +186,9 @@ footer p{margin:0;max-width:62ch}
   .summary{grid-template-columns:minmax(0,1fr);gap:24px}
   .nav{display:none}
   .addform{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
-  .addform .name{grid-column:1/-1}
+  .addform .name,.addform .brandf{grid-column:1/-1}
+  .res-item{grid-template-columns:minmax(0,1fr)}
+  .res-act{flex-direction:row;align-items:center;justify-content:space-between;min-width:0}
   .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   .card h3{font-size:19px}
   .wbtn{font-size:24px}
@@ -196,6 +222,14 @@ footer p{margin:0;max-width:62ch}
     <nav class="nav" aria-label="Sections" id="nav"></nav>
     <div class="units" role="group" aria-label="Weight unit" id="units"></div>
     <div class="mini" id="mini" aria-live="polite"></div>
+    <div class="search" id="search" hidden>
+      <form id="searchform" role="search" autocomplete="off">
+        <label class="sr" for="q">Search the web for gear</label>
+        <input id="q" type="search" maxlength="80" placeholder="Find gear online: brand and model, e.g. Zpacks Duplex">
+        <button class="btn" type="submit">Search</button>
+      </form>
+      <div class="results" id="results" hidden></div>
+    </div>
   </div>
 </header>
 
@@ -221,6 +255,7 @@ footer p{margin:0;max-width:62ch}
 </footer>
 
 <script src="items.js"></script>
+<script src="config.js"></script>
 <script>
 (function(){
 var G = 28.3495;
@@ -243,12 +278,15 @@ function load(){
 }
 var S = load();
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
-var ui = {editing:null, adding:null, confirmReset:false};
+var ui = {editing:null, adding:null, confirmReset:false, prefill:null};
+var SEARCH_URL = window.PACK_SEARCH_URL || "";
+var sr = {status:"idle", items:[], msg:"", cat:"base"};
+var searchSeq = 0;
 
 function all(){ return ITEMS.concat(S.custom); }
 function isOn(it){ return (it.id in S.chk) ? !!S.chk[it.id] : !!it.on; }
 function wt(it){ if(it.id in S.w && S.w[it.id]!=null) return S.w[it.id]; return it.oz; }
-function mine(it){ return (it.id in S.w && S.w[it.id]!=null) || it.custom; }
+function mine(it){ return (it.id in S.w && S.w[it.id]!=null) || (it.custom && it.src!=="web"); }
 function textFor(it,field){ var o = S.edits && S.edits[it.id]; return (o && o[field]!=null && o[field]!=="") ? o[field] : (it[field]||""); }
 function esc(s){ return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];}); }
 function trim(n){ return String(Math.round(n*10)/10); }
@@ -308,7 +346,7 @@ function card(it){
   } else {
     wpart = '<button type="button" class="wbtn" data-act="edit" data-id="'+it.id+'" aria-label="Weight '+fmt(w,u)+'. Edit">'+fmt(w,u)+'<small>'+alt(w,u)+'</small></button>';
   }
-  var tag = ui.editing===it.id ? "" : (w==null ? "" : '<span class="tag'+(mine(it)?' mine':'')+'">'+(mine(it)?'Your weight':'Manufacturer spec')+'</span>');
+  var tag = ui.editing===it.id ? "" : (w==null ? "" : '<span class="tag'+(mine(it)?' mine':'')+'">'+(mine(it)?'Your weight':(it.src==="web"?'From web, verify':'Manufacturer spec'))+'</span>');
   var efName = ui.editField && ui.editField.id===it.id && ui.editField.field==="name";
   var efBrand = ui.editField && ui.editField.id===it.id && ui.editField.field==="brand";
   var efNote = ui.editField && ui.editField.id===it.id && ui.editField.field==="note";
@@ -333,12 +371,78 @@ function card(it){
 }
 
 function addForm(cat){
+  var p = ui.prefill || {};
+  var wv = (p.oz!=null && isFinite(p.oz)) ? fromOz(p.oz, S.u) : "";
+  var srcNote = p.src==="web"
+    ? '<p class="srcnote">'+(p.oz!=null ? 'Weight' : 'Details')+' found on '+esc(p.host||"the web")+'. '+(p.oz!=null ? 'Check it against the product page, and edit it if your size differs.' : 'No weight was found, so enter it if you know it.')+'</p>'
+    : "";
   return '<form class="addform" id="addform" data-cat="'+cat+'">'+
-    '<label class="name">Item<input id="add-name" name="name" type="text" required maxlength="60" autocomplete="off" placeholder="e.g. Canister stove"></label>'+
-    '<label>Weight<span class="wfield"><input id="add-w" name="w" type="number" inputmode="decimal" step="any" min="0" placeholder="0"><select id="add-u" name="u" aria-label="Unit"><option value="oz"'+(S.u==="oz"?" selected":"")+'>oz</option><option value="g"'+(S.u==="g"?" selected":"")+'>g</option><option value="lb"'+(S.u==="lb"?" selected":"")+'>lb</option></select></span></label>'+
+    '<label class="name">Item<input id="add-name" name="name" type="text" required maxlength="120" autocomplete="off" placeholder="e.g. Canister stove" value="'+esc(p.name||"")+'"></label>'+
+    '<label class="brandf">Brand<input id="add-brand" name="brand" type="text" maxlength="40" autocomplete="off" placeholder="Optional" value="'+esc(p.brand||"")+'"></label>'+
+    '<label>Weight<span class="wfield"><input id="add-w" name="w" type="number" inputmode="decimal" step="any" min="0" placeholder="0" value="'+wv+'"><select id="add-u" name="u" aria-label="Unit"><option value="oz"'+(S.u==="oz"?" selected":"")+'>oz</option><option value="g"'+(S.u==="g"?" selected":"")+'>g</option><option value="lb"'+(S.u==="lb"?" selected":"")+'>lb</option></select></span></label>'+
     '<button class="btn" type="submit">Add</button>'+
     '<button class="btn ghost" type="button" data-act="cancel-add">Cancel</button>'+
+    '<input type="hidden" name="note" value="'+esc(p.note||"")+'"><input type="hidden" name="src" value="'+esc(p.src||"")+'">'+
+    srcNote+
   '</form>';
+}
+
+// ---- web search ----
+function safeHref(u){ return /^https?:\/\//i.test(u||"") ? u : ""; }
+function cleanResult(r){
+  if(!r || typeof r.name!=="string" || !r.name.trim()) return null;
+  var oz = (typeof r.weight_oz==="number" && isFinite(r.weight_oz) && r.weight_oz>0) ? r.weight_oz : null;
+  return {
+    name: r.name.trim().slice(0,120),
+    brand: typeof r.brand==="string" ? r.brand.trim().slice(0,40) : "",
+    oz: oz,
+    low: oz!=null && r.confidence!=="high",
+    host: typeof r.source_host==="string" ? r.source_host.slice(0,80) : "",
+    url: safeHref(r.source_url),
+    wnote: typeof r.weight_note==="string" ? r.weight_note.slice(0,80) : ""
+  };
+}
+function renderResults(){
+  var box = document.getElementById("results"); if(!box) return;
+  if(sr.status==="idle"){ box.hidden = true; box.innerHTML = ""; return; }
+  var opts = CATS.map(function(c){ return '<option value="'+c.id+'"'+(sr.cat===c.id?" selected":"")+'>'+esc(c.name)+'</option>'; }).join("");
+  var head = '<div class="res-head"><label>Add to <select id="res-cat" aria-label="Category to add to">'+opts+'</select></label><button type="button" class="btn ghost" data-act="close-results">Close</button></div>';
+  var body;
+  if(sr.status==="loading") body = '<p class="res-msg" role="status">Searching…</p>';
+  else if(sr.status==="error") body = '<p class="res-msg" role="status">'+esc(sr.msg)+'</p>';
+  else if(!sr.items.length) body = '<p class="res-msg" role="status">No matches. Try the brand and model, or add the item by hand.</p>';
+  else body = '<ul class="res-list" aria-label="Search results">'+sr.items.map(function(r,i){
+    var meta = (r.brand ? esc(r.brand) : "Brand not found") + (r.host ? ' · '+(r.url ? '<a href="'+esc(r.url)+'" target="_blank" rel="noopener noreferrer">'+esc(r.host)+'</a>' : esc(r.host)) : "");
+    var wt = r.oz!=null ? '<div class="res-wt">'+fmt(r.oz,S.u)+'</div>'+(r.low?'<div class="res-flag">Verify</div>':'') : '<div class="res-wt none">No weight found</div>';
+    return '<li class="res-item"><div><div class="res-name">'+esc(r.name)+'</div><div class="res-meta">'+meta+'</div></div>'+
+      '<div class="res-act">'+wt+'<button type="button" class="btn" data-act="use-result" data-i="'+i+'" aria-label="Add '+esc(r.name)+'">Add</button></div></li>';
+  }).join("")+'</ul>';
+  box.hidden = false;
+  box.innerHTML = head + body;
+}
+function closeResults(){ sr.status = "idle"; sr.items = []; renderResults(); }
+function runSearch(q){
+  var seq = ++searchSeq;
+  sr.status = "loading"; sr.items = []; sr.msg = ""; renderResults();
+  var ctl = ("AbortController" in window) ? new AbortController() : null;
+  var timer = setTimeout(function(){ if(ctl) ctl.abort(); }, 12000);
+  fetch(SEARCH_URL + (SEARCH_URL.indexOf("?")===-1 ? "?" : "&") + "q=" + encodeURIComponent(q), {headers:{"Accept":"application/json"}, signal: ctl ? ctl.signal : undefined})
+    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, status:r.status, j:j}; }); })
+    .then(function(x){
+      clearTimeout(timer); if(seq!==searchSeq) return;
+      if(!x.ok){
+        sr.status = "error";
+        sr.msg = x.status===429 ? "Search is busy. Try again in a few seconds, or add the item by hand." : "Search is unavailable right now. You can still add the item by hand.";
+      } else {
+        sr.items = (x.j && Array.isArray(x.j.results) ? x.j.results : []).map(cleanResult).filter(Boolean).slice(0,5);
+        sr.status = "done";
+      }
+      renderResults();
+    })
+    .catch(function(){
+      clearTimeout(timer); if(seq!==searchSeq) return;
+      sr.status = "error"; sr.msg = "Couldn't reach search. You can still add the item by hand."; renderResults();
+    });
 }
 
 function render(){
@@ -379,11 +483,12 @@ function render(){
       '<div class="grid">'+grid+'</div></section>';
   }).join("");
   document.getElementById("sections").innerHTML = html;
+  renderResults();
   var rb = document.getElementById("reset"); rb.textContent = ui.confirmReset ? "Tap again to confirm" : "Reset list";
 
   if(ui.editing){ var e = document.getElementById("edit-"+ui.editing); if(e){ e.focus(); e.select(); } }
   else if(ui.editField){ var ef = document.getElementById("ef-"+ui.editField.id+"-"+ui.editField.field); if(ef){ ef.focus(); ef.select(); } }
-  else if(ui.adding && !focusId){ var a = document.getElementById("add-name"); if(a) a.focus(); }
+  else if(ui.adding && !focusId){ var a = document.getElementById(ui.prefill ? "add-w" : "add-name"); if(a) a.focus(); }
   else if(focusId){ var f = document.getElementById(focusId); if(f) f.focus(); }
 }
 
@@ -420,6 +525,7 @@ function commitTextEdit(id, field, cancel, quiet){
 document.addEventListener("change", function(e){
   var t = e.target;
   if(t.classList && t.classList.contains("pick")) toggle(t.getAttribute("data-id"));
+  else if(t.id==="res-cat"){ sr.cat = t.value; }
   else if(t.classList && t.classList.contains("editu")){
     var id = t.getAttribute("data-id");
     var oldUnit = ui.editUnit || S.u, newUnit = t.value;
@@ -434,6 +540,7 @@ document.addEventListener("change", function(e){
   }
 });
 document.addEventListener("click", function(e){
+  if(sr.status!=="idle" && !(e.target.closest && e.target.closest("#search"))) closeResults();
   var b = e.target.closest ? e.target.closest("[data-act]") : null;
   if(!b){
     if(e.target.id==="reset") return;
@@ -444,8 +551,19 @@ document.addEventListener("click", function(e){
   else if(act==="jump"){ var s = document.getElementById("sec-"+id); if(s) s.scrollIntoView({behavior:"smooth", block:"start"}); }
   else if(act==="edit"){ ui.editing = id; ui.editUnit = S.u; ui.editPending = null; ui.editField = null; render(); }
   else if(act==="edit-field"){ ui.editing = null; ui.editField = {id:id, field:b.getAttribute("data-field")}; render(); }
-  else if(act==="add"){ ui.adding = (ui.adding===id ? null : id); render(); }
-  else if(act==="cancel-add"){ ui.adding = null; render(); }
+  else if(act==="add"){ ui.adding = (ui.adding===id ? null : id); ui.prefill = null; render(); }
+  else if(act==="cancel-add"){ ui.adding = null; ui.prefill = null; render(); }
+  else if(act==="close-results"){ closeResults(); var qi = document.getElementById("q"); if(qi) qi.focus(); }
+  else if(act==="use-result"){
+    var r = sr.items[parseInt(b.getAttribute("data-i"),10)]; if(!r) return;
+    ui.prefill = {
+      name:r.name, brand:r.brand, oz:r.oz, src:"web", host:r.host,
+      note: r.oz!=null ? ("Weight from "+(r.host||"a web search")+(r.low?" (unverified).":".")) : (r.host ? "Found via "+r.host+"." : "")
+    };
+    ui.adding = sr.cat; ui.editing = null; ui.editField = null;
+    closeResults(); render();
+    var f = document.getElementById("addform"); if(f) f.scrollIntoView({behavior:"smooth", block:"center"});
+  }
   else if(act==="remove"){
     S.custom = S.custom.filter(function(x){return x.id!==id;}); delete S.chk[id]; delete S.w[id]; save(); render();
   }
@@ -465,6 +583,9 @@ document.addEventListener("focusout", function(e){
 });
 document.addEventListener("keydown", function(e){
   var t = e.target;
+  if(e.key==="Escape" && sr.status!=="idle" && t && t.closest && t.closest("#search")){
+    e.preventDefault(); closeResults(); var qi = document.getElementById("q"); if(qi) qi.focus(); return;
+  }
   if(t && t.id && t.id.indexOf("edit-")===0){
     if(e.key==="Enter"){ e.preventDefault(); commitEdit(t.id.slice(5), false); }
     else if(e.key==="Escape"){ e.preventDefault(); commitEdit(t.id.slice(5), true); }
@@ -477,23 +598,37 @@ document.addEventListener("keydown", function(e){
   }
 });
 document.addEventListener("submit", function(e){
+  if(e.target.id==="searchform"){
+    e.preventDefault();
+    if(!SEARCH_URL) return;
+    var q = document.getElementById("q").value.replace(/\s+/g," ").trim();
+    if(q.length<2) return;
+    runSearch(q);
+    return;
+  }
   if(e.target.id!=="addform") return;
   e.preventDefault();
   var f = e.target, cat = f.getAttribute("data-cat");
   var name = f.elements.name.value.trim(); if(!name) return;
+  var brand = f.elements.brand.value.trim();
+  var note = f.elements.note.value.trim();
+  var fromWeb = f.elements.src.value==="web";
   var raw = f.elements.w.value.trim(), oz = null;
   if(raw!==""){ var n = parseFloat(raw); if(isFinite(n) && n>=0) oz = toOz(n, f.elements.u.value); }
   var id = "c"+Date.now().toString(36)+Math.floor(Math.random()*1000).toString(36);
   var role = (CATS.filter(function(c){return c.id===cat;})[0]||{}).name || "Item";
-  S.custom.push({id:id, cat:cat, role:role, name:name, brand:"", oz:oz, custom:true, on:true, note:""});
+  var item = {id:id, cat:cat, role:role, name:name, brand:brand, oz:oz, custom:true, on:true, note:note};
+  if(fromWeb) item.src = "web";
+  S.custom.push(item);
   S.chk[id] = true;
-  ui.adding = cat; save(); render();
+  ui.prefill = null; ui.adding = cat; save(); render();
   var a = document.getElementById("add-name"); if(a) a.focus();
 });
 document.getElementById("reset").addEventListener("click", function(){
   if(!ui.confirmReset){ ui.confirmReset = true; render(); setTimeout(function(){ ui.confirmReset=false; render(); }, 4000); return; }
-  S = defaults(); ui = {editing:null, adding:null, confirmReset:false}; save(); render();
+  S = defaults(); ui = {editing:null, adding:null, confirmReset:false, prefill:null}; save(); render();
 });
+if(SEARCH_URL){ var sb = document.getElementById("search"); if(sb) sb.hidden = false; }
 render();
 })();
 </script>

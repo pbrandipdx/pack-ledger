@@ -7,6 +7,8 @@ This repo is a static website (GitHub Pages) that lets the owner check off backp
 - `items.js` holds all gear data. Almost every update is an edit to this file.
 - `index.html` holds the page layout, styles, and behavior. Change it only for design or feature requests.
 - `images/` holds one product photo per item, JPG, about 420 px on the long side, under 60 KB.
+- `config.js` holds one setting, `window.PACK_SEARCH_URL`, the address of the web gear search function. Empty means the search bar is hidden.
+- `search-api/` holds the serverless function behind the search bar and its tests. It is not part of the page. See `search-api/README.md`.
 
 ## How to update the gear list
 
@@ -45,8 +47,16 @@ Crop to the product, resize to about 420 px on the long side, save as JPG at qua
 
 The look is a clean white, image-forward product grid with dark navy text, condensed uppercase headings (Barlow Condensed), and Barlow body text. Colors are CSS variables at the top of `index.html`, with a dark theme block. Keep both themes working and keep the layout usable at phone width.
 
+## Web gear search
+
+The search bar in the header (hidden unless `config.js` sets a URL) calls the function in `search-api/`, which returns candidates with name, brand, and weight when one could be found. Tapping Add on a result opens the normal add form prefilled, and the owner confirms it. The page never writes search results straight into the list.
+
+- Items added this way are custom items with `src:"web"`. Their weight tag reads "From web, verify" until the owner edits the weight, then "Your weight".
+- Never present a searched weight as a manufacturer spec. Weights vary by size and version, and a missing weight is better than a wrong one.
+- The parsing rules live in `search-api/parse.mjs` and are covered by `node --test search-api/parse.test.mjs`. Run the tests after changing it, and add a test for any wrong weight you fix.
+
 ## Things to leave alone
 
 Saved state lives in each browser's localStorage under the key `packledger.v1`. Do not change that key or the shape of the saved object without a migration.
 
-The saved object has `u` (unit), `chk` (checked state), `w` (weight overrides), `custom` (added items), and `edits` (per-item text overrides for name/brand/note). On any card, clicking the weight, name, brand, or note text edits it in place, in that browser only. The weight editor also has its own unit dropdown, independent of the header's global unit toggle.
+The saved object has `u` (unit), `chk` (checked state), `w` (weight overrides), `custom` (added items, which may carry `src:"web"`), and `edits` (per-item text overrides for name/brand/note). On any card, clicking the weight, name, brand, or note text edits it in place, in that browser only. The weight editor also has its own unit dropdown, independent of the header's global unit toggle.
